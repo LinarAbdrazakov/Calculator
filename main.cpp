@@ -2,6 +2,15 @@
 #include <vector>
 #include "std_lib_facilities.h"
 
+
+const char number = '8'; // t.kind == number означает, что t - число
+const char quit = 'q';   // t.kind == quit означает, что t - лексема выхода
+const char print = ';';   // t.kind == print означает, что t - лексема печати
+const string prompt = "> ";
+const string result = "= "; // Используется для указания на то,
+                            // что даллее следует результат
+
+
 class Token {
 public:
     char kind;
@@ -28,12 +37,13 @@ void Token_stream::putback(Token t) {
     full = true;
 }
 Token Token_stream::get() {
-    if (full) {
+    if (full) {          // Проверка наличия Token в буфере
         full = false;
         return buffer;
     }
     char ch;
-    cin >> ch;
+    cin >> ch;           // Заметим, что оператор >> пропускает
+                         // пробельные символы
 
     switch (ch) {
         case ';':
@@ -44,22 +54,18 @@ Token Token_stream::get() {
         case '-':
         case '/':
         case '*':
-            return Token{ch};
-        case '.':
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9': {
-            cin.putback(ch);
+        case '%':
+            return Token{ch}; // Каждый символ представляет сам себя
+        case '.':             // Число с плавающей точкой может начинаться с точки
+
+            // Числовой литерал:
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+        {
+            cin.putback(ch); // Возврат цифры или точки во входной поток
             double val;
-            cin >> val;
-            return Token{'8', val};
+            cin >> val;      // Чтение числа с плавающей точкой
+            return Token{number, val};
         }
         default:
             error("Неверная лексема");
@@ -80,9 +86,12 @@ double primary() {
             }
             return d;
         }
-        case '8':
+        case number:
             return t.value;
-
+        case '-':
+            return - primary();
+        case '+':
+            return primary();
         default:
             error("Требуется первичное выражение");
     }
@@ -99,16 +108,19 @@ double term() {
             case '/': {
                 double d = primary();
                 if (d == 0) {
-                    error("Деление на нуль!");
+                    error("Деление на нуль");
                 }
                 left /= d;
                 t = ts.get();
                 break;
             }
-                //case '%':
-                //    left %= primary();
-                //    t = get_token();
-                //    break;
+            case '%': {
+                double d = primary();
+                if(d == 0) error("%: деление на нуль");
+                left = fmod(left, d);
+                t = ts.get();
+                break;
+            }
             default:
                 ts.putback(t);
                 return left;
@@ -135,25 +147,33 @@ double expression() {
     }
 }
 
+void calculate() {
+    double val = 0;
+    while(cin) {
+        cout << prompt;
+        Token t = ts.get();
+        while (t.kind == print) t = ts.get(); // "Съедает" ';'
+        if (t.kind == quit) return;
+        ts.putback(t);
+        val = expression();
+        cout << result << val << '\n';
+    }
+}
+
 int main() {
     try {
-        double val = 0;
-        while(cin) {
-            Token t = ts.get();
-            if(t.kind == 'q') break;
-            if(t.kind == ';')
-                cout << "= " << val << endl;
-            else
-                ts.putback(t);
-            val = expression();
-        }
+        calculate();
+        keep_window_open();
+        return 0;
     }
-    catch(exception& e) {
+    catch (runtime_error& e) {
         cerr << e.what() << endl;
+        keep_window_open("~~");
         return 1;
     }
-    catch(...) {
+    catch (...) {
         cerr << "Исключение" << endl;
+        keep_window_open("~~");
         return 2;
     }
 }
