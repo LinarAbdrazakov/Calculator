@@ -10,7 +10,11 @@ const string result = "= ";      // Используется для указан
                                  // что даллее следует результат
 const char name = 'a';           // Лексема Имя
 const char let = 'L';            // Лексема let
+const char const_var = 'C';
+const char change = 'H';
 const string declkey = "let";    // Ключевое слов let
+const string declkey_const = "const";
+const string declkey_change = "change";
 
 
 class Token {
@@ -41,9 +45,10 @@ private:
 struct Variable {
     string name;
     double value;
+    bool is_const;
 
     Variable() {}
-    Variable(string name, double value): name(name), value(value) {}
+    Variable(string name, double value, bool is_const): name(name), value(value), is_const(is_const) {}
 };
 
 void Token_stream::putback(Token t) {
@@ -102,6 +107,10 @@ Token Token_stream::get() {
                 }
                 if(s == declkey)
                     return Token(let); // Ключевое слово let
+                if(s == declkey_const)
+                    return Token(const_var);
+                if(s == declkey_change)
+                    return Token(change);
                 return Token{name, s};
             }
             error("Неверная лексема");
@@ -143,7 +152,7 @@ double primary() {
             return - primary();
         case '+':
             return primary();
-        case 'a': {
+        case name: {
             string var_name = t.name;
             return get_value(var_name);
         }
@@ -163,7 +172,7 @@ double term() {
             case '/': {
                 double d = primary();
                 if (d == 0) {
-                    error("Деление на нуль");
+                    error("/: деление на нуль");
                 }
                 left /= d;
                 t = ts.get();
@@ -213,6 +222,10 @@ double get_value(string s) {
 void set_value(string s, double d) {
     for (Variable& v : var_table){
         if (v.name == s) {
+            if(v.is_const) {
+                error("set: нельзя изменять константы");
+                return;
+            }
             v.value = d;
             return;
         }
@@ -228,14 +241,14 @@ bool is_declared(string var) {
     return false;
 }
 
-double define_name(string var, double val) {
+double define_name(string var, double val, bool is_const=false) {
     // Добавляем пару (var, val) в вектор var_table
     if(is_declared(var)) error(var, " повторное объявление");
-    var_table.push_back(Variable(var, val));
+    var_table.push_back(Variable(var, val, is_const));
     return val;
 }
 
-double declaration() {
+double declaration(bool is_const=false) {
     // Считаем, что мы уже встретили ключевое слово "let"
     // Обрабатываем: Имя = Выражение
     // Объявление переменной с Именем с начальным значением,
@@ -250,7 +263,22 @@ double declaration() {
         error("Пропущен символ = в объявлении ", var_name);
 
     double d = expression();
-    define_name(var_name, d);
+    define_name(var_name, d, is_const);
+    return d;
+}
+
+double change_variable() {
+    Token t = ts.get();
+    if(t.kind != name)
+        error("в изменении ожидается имя переменной");
+    string var_name = t.name;
+
+    Token t2 = ts.get();
+    if (t2.kind != '=')
+        error("Пропущен символ = в изменении ", var_name);
+
+    double d = expression();
+    set_value(var_name, d);
     return d;
 }
 
@@ -258,7 +286,11 @@ double statement() {
     Token t = ts.get();
     switch (t.kind) {
         case let:
-            return declaration();
+            return declaration(false);
+        case const_var:
+            return declaration(true);
+        case change:
+            return change_variable();
         default:
             ts.putback(t);
             return expression();
@@ -288,6 +320,9 @@ void calculate() {
 
 int main() {
     try {
+        define_name("pi", 3.1415, true);
+        define_name("e", 2.71828, true);
+
         calculate();
         keep_window_open();
         return 0;
