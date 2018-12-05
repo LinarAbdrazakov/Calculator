@@ -3,7 +3,7 @@
 //
 #include <iostream>
 #include "std_lib_facilities.h"
-
+#include "variable.h"
 
 const char number = '8';                // t.kind == number означает, что t - число
 const char quit = 'q';                  // t.kind == quit означает, что t - лексема выхода
@@ -43,15 +43,6 @@ public:
 private:
     bool full {false};
     Token buffer;
-};
-
-struct Variable {
-    string name;
-    double value;
-    bool is_const;
-
-    Variable() {}
-    Variable(string name, double value, bool is_const): name(name), value(value), is_const(is_const) {}
 };
 
 void Token_stream::putback(Token t) {
@@ -157,7 +148,6 @@ private:
     double statement();
     void clean_up_mess();
 };
-
 
 double Calculator::primary() {
     Token t = ts.get();

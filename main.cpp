@@ -8,6 +8,7 @@ int main() {
     try {
         calc.define_const("pi", 3.1415);
         calc.define_const("e", 2.71828);
+        calc.define_const("c", 3e8);
 
         calc.calculate();
         keep_window_open();
