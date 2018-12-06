@@ -35,9 +35,9 @@ public:
 
 class Token_stream {
 public:
-    Token get();
+    Token get(istream& in);
     void putback(Token t);
-    void ignore(char c);
+    void ignore(istream& in, char c);
 
 private:
     bool full {false};
@@ -50,22 +50,22 @@ public:
     void define_var(string, double);
     void exec();
 
-    void calculate();
+    void calculate(istream& in);
 
 private:
     Token_stream ts;
     vector <Variable> var_table;
 
-    double primary();
-    double term();
-    double expression();
+    double primary(istream& in);
+    double term(istream& in);
+    double expression(istream& in);
     double get_value(string s);
     void set_value(string s, double d);
     bool is_declared(string var);
     double define_name(string var, double val, bool is_const);
-    double declaration(bool is_const);
-    double change_variable();
-    double statement();
-    void clean_up_mess();
+    double declaration(istream& in, bool is_const);
+    double change_variable(istream& in);
+    double statement(istream& in);
+    void clean_up_mess(istream& in);
 };
 

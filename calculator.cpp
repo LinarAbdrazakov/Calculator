@@ -36,9 +36,9 @@ public:
 };
 class Token_stream {
 public:
-    Token get();
+    Token get(istream& in);
     void putback(Token t);
-    void ignore(char c);
+    void ignore(istream& in, char c);
 
 private:
     bool full {false};
@@ -50,13 +50,13 @@ void Token_stream::putback(Token t) {
     buffer = t;
     full = true;
 }
-Token Token_stream::get() {
+Token Token_stream::get(istream& in) {
     if (full) {          // Проверка наличия Token в буфере
         full = false;
         return buffer;
     }
     char ch;
-    cin >> ch;           // Заметим, что оператор >> пропускает
+    in >> ch;           // Заметим, что оператор >> пропускает
     // пробельные символы
 
     switch (ch) {
@@ -79,21 +79,21 @@ Token Token_stream::get() {
         {
             cin.putback(ch); // Возврат цифры или точки во входной поток
             double val;
-            cin >> val;      // Чтение числа с плавающей точкой
+            in >> val;      // Чтение числа с плавающей точкой
             return Token{number, val};
         }
         default:
             if(isalpha(ch)) {
-                cin.putback(ch);
+                in.putback(ch);
                 string s = "";
                 //cin >> s;
                 char el = '\0';
                 while(true){
-                    cin.get(el);
+                    in.get(el);
                     if((el >= 'a' && el <= 'z')||(el >= 'A' && el <= 'Z')){
                         s += el;
                     } else if (el != ' '){
-                        cin.putback(el);
+                        in.putback(el);
                         break;
                     } else {
                         break;
@@ -110,7 +110,7 @@ Token Token_stream::get() {
             error("Неверная лексема");
     }
 }
-void Token_stream::ignore(char c) {      // Символ с представляет разновидность лексем
+void Token_stream::ignore(istream& in, char c) {      // Символ с представляет разновидность лексем
     if (full && c==buffer.kind) {        // Сначала проверяем буфер:
         full = false;
         return;
@@ -118,7 +118,7 @@ void Token_stream::ignore(char c) {      // Символ с представля
     full = false;
 
     char ch = 0;
-    while (cin >> ch) {
+    while (in >> ch) {
         if (ch == c) return;
     }
 }
@@ -130,31 +130,31 @@ public:
     void define_var(string, double);
     void exec();
 
-    void calculate();
+    void calculate(istream& in);
 
 private:
     Token_stream ts;
     vector <Variable> var_table;
 
-    double primary();
-    double term();
-    double expression();
+    double primary(istream& in);
+    double term(istream& in);
+    double expression(istream& in);
     double get_value(string s);
     void set_value(string s, double d);
     bool is_declared(string var);
     double define_name(string var, double val, bool is_const);
-    double declaration(bool is_const);
-    double change_variable();
-    double statement();
-    void clean_up_mess();
+    double declaration(istream& in, bool is_const);
+    double change_variable(istream& in);
+    double statement(istream& in);
+    void clean_up_mess(istream& in);
 };
 
-double Calculator::primary() {
-    Token t = ts.get();
+double Calculator::primary(istream& in) {
+    Token t = ts.get(in);
     switch(t.kind) {
         case '(': {
-            double d = expression();
-            t = ts.get();
+            double d = expression(in);
+            t = ts.get(in);
             if(t.kind != ')') {
                 error("Требуется ')'");
             }
@@ -163,9 +163,9 @@ double Calculator::primary() {
         case number:
             return t.value;
         case '-':
-            return - primary();
+            return - primary(in);
         case '+':
-            return primary();
+            return primary(in);
         case name: {
             string var_name = t.name;
             return get_value(var_name);
@@ -174,29 +174,29 @@ double Calculator::primary() {
             error("Требуется первичное выражение");
     }
 }
-double Calculator::term() {
-    double left = primary();
-    Token t = ts.get();
+double Calculator::term(istream& in) {
+    double left = primary(in);
+    Token t = ts.get(in);
     while(true){
         switch(t.kind){
             case '*':
-                left *= primary();
-                t = ts.get();
+                left *= primary(in);
+                t = ts.get(in);
                 break;
             case '/': {
-                double d = primary();
+                double d = primary(in);
                 if (d == 0) {
                     error("/: деление на нуль");
                 }
                 left /= d;
-                t = ts.get();
+                t = ts.get(in);
                 break;
             }
             case '%': {
-                double d = primary();
+                double d = primary(in);
                 if(d == 0) error("%: деление на нуль");
                 left = fmod(left, d);
-                t = ts.get();
+                t = ts.get(in);
                 break;
             }
             default:
@@ -205,18 +205,18 @@ double Calculator::term() {
         }
     }
 }
-double Calculator::expression() {
-    double left = term();
-    Token t = ts.get();
+double Calculator::expression(istream& in) {
+    double left = term(in);
+    Token t = ts.get(in);
     while(true){
         switch(t.kind){
             case '+':
-                left += term();
-                t = ts.get();
+                left += term(in);
+                t = ts.get(in);
                 break;
             case '-':
-                left -= term();
-                t = ts.get();
+                left -= term(in);
+                t = ts.get(in);
                 break;
             default:
                 ts.putback(t);
@@ -259,71 +259,71 @@ double Calculator::define_name(string var, double val, bool is_const=false) {
     var_table.push_back(Variable(var, val, is_const));
     return val;
 }
-double Calculator::declaration(bool is_const=false) {
+double Calculator::declaration(istream& in, bool is_const=false) {
     // Считаем, что мы уже встретили ключевое слово "let"
     // Обрабатываем: Имя = Выражение
     // Объявление переменной с Именем с начальным значением,
     // заданным выражением
-    Token t = ts.get();
+    Token t = ts.get(in);
     if(t.kind != name)
         error("в объявлении ожидается имя переменной");
     string var_name = t.name;
 
-    Token t2 = ts.get();
+    Token t2 = ts.get(in);
     if (t2.kind != '=')
         error("Пропущен символ = в объявлении ", var_name);
 
-    double d = expression();
+    double d = expression(in);
     define_name(var_name, d, is_const);
     return d;
 }
-double Calculator::change_variable() {
-    Token t = ts.get();
+double Calculator::change_variable(istream& in) {
+    Token t = ts.get(in);
     if(t.kind != name)
         error("в изменении ожидается имя переменной");
     string var_name = t.name;
 
-    Token t2 = ts.get();
+    Token t2 = ts.get(in);
     if (t2.kind != '=')
         error("Пропущен символ = в изменении ", var_name);
 
-    double d = expression();
+    double d = expression(in);
     set_value(var_name, d);
     return d;
 }
-double Calculator::statement() {
-    Token t = ts.get();
+double Calculator::statement(istream& in) {
+    Token t = ts.get(in);
     switch (t.kind) {
         case let:
-            return declaration(false);
+            return declaration(in, false);
         case const_var:
-            return declaration(true);
+            return declaration(in, true);
         case change:
-            return change_variable();
+            return change_variable(in);
         default:
             ts.putback(t);
-            return expression();
+            return expression(in);
     }
 }
 
-void Calculator::clean_up_mess() {
-    ts.ignore(print);
+void Calculator::clean_up_mess(istream& in) {
+    ts.ignore(in, print);
 }
-void Calculator::calculate() {
+void Calculator::calculate(istream& in) {
     double val = 0;
-    while(cin)
+    while(in)
         try {
             cout << prompt;
-            Token t = ts.get();
-            while (t.kind == print) t = ts.get(); // "Съедает" ';'
+            Token t = ts.get(in);
+            while (t.kind == print) t = ts.get(in); // "Съедает" ';'
             if (t.kind == quit) return;
             ts.putback(t);
-            val = statement();
+            val = statement(in);
             cout << result << val << '\n';
         }
         catch (exception& e) {
             cerr << e.what() << '\n';
-            clean_up_mess();
+            clean_up_mess(in);
         }
 }
 

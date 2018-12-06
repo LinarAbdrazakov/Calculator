@@ -1,6 +1,7 @@
 #include <iostream>
 #include "std_lib_facilities.h"
 #include "calculator.h"
+#include <fstream>
 
 Calculator calc;
 
@@ -10,7 +11,9 @@ int main() {
         calc.define_const("e", 2.71828);
         calc.define_const("c", 3e8);
 
-        calc.calculate();
+        ifstream fin("input.txt");
+
+        calc.calculate(cin);
         keep_window_open();
         return 0;
     }
