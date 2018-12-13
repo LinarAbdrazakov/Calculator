@@ -5,18 +5,9 @@
 #ifndef TASK1_MIPT_CALCULATOR_CALCULATOR_H
 #define TASK1_MIPT_CALCULATOR_CALCULATOR_H
 
-#endif //TASK1_MIPT_CALCULATOR_CALCULATOR_H
-
 #include "std_lib_facilities.h"
 
-struct Variable {
-    string name;
-    double value;
-    bool is_const;
-
-    Variable() {}
-    Variable(string name, double value, bool is_const): name(name), value(value), is_const(is_const) {}
-};
+#include "variable.h"
 
 class Token {
 public:
@@ -35,6 +26,9 @@ public:
 
 class Token_stream {
 public:
+    Token_stream( istream &is )
+            : in{ is }
+    {}
     Token get(istream& in);
     void putback(Token t);
     void ignore(istream& in, char c);
@@ -42,13 +36,17 @@ public:
 private:
     bool full {false};
     Token buffer;
+    istream &in;
 };
 
 class Calculator {
 public:
+    Calculator( istream & is = cin )
+            : ts{ is }
+    {}
+    void hello();
     void define_const(string, double);
     void define_var(string, double);
-    void exec();
 
     void calculate(istream& in);
 
@@ -69,3 +67,4 @@ private:
     void clean_up_mess(istream& in);
 };
 
+#endif //TASK1_MIPT_CALCULATOR_CALCULATOR_H

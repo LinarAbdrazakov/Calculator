@@ -4,6 +4,7 @@
 #include <iostream>
 #include "std_lib_facilities.h"
 #include "variable.h"
+#include "calculator.h"
 
 const char number = '8';                // t.kind == number означает, что t - число
 const char quit = 'q';                  // t.kind == quit означает, что t - лексема выхода
@@ -20,37 +21,12 @@ const string declkey_const = "const";
 const string declkey_change = "change";
 
 
-class Token {
-public:
-    char kind;
-    double value;
-    string name;
-
-    Token() {}
-    Token(char ch)
-            : kind{ ch }, value{ 0 } {}
-    Token(char ch, double val)
-            : kind{ ch }, value{ val } {}
-    Token(char ch, string name)
-            : kind{ ch }, name{ name } {}
-};
-class Token_stream {
-public:
-    Token get(istream& in);
-    void putback(Token t);
-    void ignore(istream& in, char c);
-
-private:
-    bool full {false};
-    Token buffer;
-};
-
 void Token_stream::putback(Token t) {
     if (full) error("putback(): буфер заполнен");
     buffer = t;
     full = true;
 }
-Token Token_stream::get(istream& in) {
+Token Token_stream::get(istream& ) {
     if (full) {          // Проверка наличия Token в буфере
         full = false;
         return buffer;
@@ -123,31 +99,6 @@ void Token_stream::ignore(istream& in, char c) {      // Символ с пре�
     }
 }
 
-
-class Calculator {
-public:
-    void define_const(string, double);
-    void define_var(string, double);
-    void exec();
-
-    void calculate(istream& in);
-
-private:
-    Token_stream ts;
-    vector <Variable> var_table;
-
-    double primary(istream& in);
-    double term(istream& in);
-    double expression(istream& in);
-    double get_value(string s);
-    void set_value(string s, double d);
-    bool is_declared(string var);
-    double define_name(string var, double val, bool is_const);
-    double declaration(istream& in, bool is_const);
-    double change_variable(istream& in);
-    double statement(istream& in);
-    void clean_up_mess(istream& in);
-};
 
 double Calculator::primary(istream& in) {
     Token t = ts.get(in);
@@ -332,4 +283,15 @@ void Calculator::define_var(string var, double val) {
 }
 void Calculator::define_const(string var, double val) {
     define_name(var, val, true);
+}
+
+void Calculator::hello() {
+    cout << "Variables and constants:" << endl;
+    cout << setw(10) << "Name" << " | " << setw(10) << "Value" << " | " << setw(10) << "Type" << endl;
+    cout << "-----------------------------------------" << endl;
+    for(const Variable& var :  var_table) {
+        cout << setw(10) << var.name << " | "
+             << setw(10) << var.value << " | "
+             << setw(10) << (var.is_const ? "Constant" : "Variable") << endl;
+    }
 }

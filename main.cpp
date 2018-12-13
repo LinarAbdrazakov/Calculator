@@ -3,15 +3,19 @@
 #include "calculator.h"
 #include <fstream>
 
-Calculator calc;
 
 int main() {
     try {
+
+        ifstream fin("input.txt");
+
+        Calculator calc{cin};
+
         calc.define_const("pi", 3.1415);
         calc.define_const("e", 2.71828);
         calc.define_const("c", 3e8);
 
-        ifstream fin("input.txt");
+        calc.hello();
 
         calc.calculate(cin);
         keep_window_open();
